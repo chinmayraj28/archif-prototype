@@ -1,12 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
 export default function PaymentSuccessPage() {
+    return (
+        <Suspense
+            fallback={
+                <div className="flex items-center justify-center min-h-[60vh]">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+            }
+        >
+            <PaymentSuccessContent />
+        </Suspense>
+    );
+}
+
+function PaymentSuccessContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const [loading, setLoading] = useState(true);
@@ -65,5 +79,6 @@ export default function PaymentSuccessPage() {
         </div>
     );
 }
+
 
 

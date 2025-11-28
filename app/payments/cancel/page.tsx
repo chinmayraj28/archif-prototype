@@ -1,11 +1,26 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { XCircle } from "lucide-react";
 import Link from "next/link";
 
 export default function PaymentCancelPage() {
+    return (
+        <Suspense
+            fallback={
+                <div className="flex items-center justify-center min-h-[60vh]">
+                    <p>Loading...</p>
+                </div>
+            }
+        >
+            <PaymentCancelContent />
+        </Suspense>
+    );
+}
+
+function PaymentCancelContent() {
     const searchParams = useSearchParams();
     const offerId = searchParams.get("offer_id");
 
@@ -29,5 +44,6 @@ export default function PaymentCancelPage() {
         </div>
     );
 }
+
 
 

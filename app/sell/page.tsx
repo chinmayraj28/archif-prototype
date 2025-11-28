@@ -228,7 +228,14 @@ export default function SellPage() {
                             <FormItem>
                                 <FormLabel>Price ($)</FormLabel>
                                 <FormControl>
-                                    <Input type="number" step="0.01" {...field} value={field.value as number} />
+                                    <Input
+                                        type="number"
+                                        step="0.01"
+                                        value={field.value ?? ""}
+                                        onChange={(e) =>
+                                            field.onChange(parseFloat(e.target.value) || 0)
+                                        }
+                                    />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>

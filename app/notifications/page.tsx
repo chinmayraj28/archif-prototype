@@ -79,7 +79,7 @@ export default async function NotificationsPage() {
                 ) : (
                     notifications.map((notification) => (
                         <div
-                            key={notification._id}
+                            key={String(notification._id)}
                             className="flex items-center gap-4 border rounded-lg p-4 bg-white"
                         >
                             <Avatar>
@@ -105,5 +105,6 @@ export default async function NotificationsPage() {
         </div>
     );
 }
+
 
 

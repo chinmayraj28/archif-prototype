@@ -51,15 +51,17 @@ export default function OfferActions({
         return ["declined", "accepted"].includes(existingOffer.status);
     }
 
-    const awaitingSellerDecision =
+    const awaitingSellerDecision = !!(
         existingOffer &&
         existingOffer.status === "pending" &&
-        existingOffer.lastActionBy === "buyer";
+        existingOffer.lastActionBy === "buyer"
+    );
 
-    const awaitingBuyerDecision =
+    const awaitingBuyerDecision = !!(
         existingOffer &&
         existingOffer.status === "countered" &&
-        existingOffer.lastActionBy === "seller";
+        existingOffer.lastActionBy === "seller"
+    );
 
     async function submitOffer(isCounter = false) {
         setSubmitting(true);
@@ -160,7 +162,7 @@ export default function OfferActions({
                         </div>
                         <DialogFooter>
                             <Button
-                                onClick={() => submitOffer(!!existingOffer && awaitingBuyerDecision)}
+                                onClick={() => submitOffer(awaitingBuyerDecision)}
                                 disabled={submitting}
                             >
                                 {submitting ? "Submitting..." : "Send"}
@@ -250,4 +252,3 @@ export default function OfferActions({
         </div>
     );
 }
-

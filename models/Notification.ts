@@ -6,7 +6,7 @@ const NotificationSchema = new Schema(
         actorId: { type: Schema.Types.ObjectId, ref: "User", required: true },
         type: {
             type: String,
-            enum: ["message", "offer", "offer_response"],
+            enum: ["message", "offer", "offer_response", "listing_sold"],
             required: true,
         },
         data: { type: Schema.Types.Mixed, default: {} },

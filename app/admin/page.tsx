@@ -14,8 +14,9 @@ import {
 import connectToDatabase from "@/lib/db";
 import Listing from "@/models/Listing";
 import DeleteButton from "../items/[id]/_components/DeleteButton";
-
-const ADMIN_EMAILS = ["admin@example.com"]; // TODO: Move to env
+import Category from "@/models/Category";
+import CategoryManager from "@/components/admin/CategoryManager";
+import { isAdminEmail } from "@/lib/admin";
 
 async function getAllListings() {
     await connectToDatabase();
@@ -23,6 +24,12 @@ async function getAllListings() {
         .populate("sellerId", "username email")
         .sort({ createdAt: -1 });
     return JSON.parse(JSON.stringify(listings));
+}
+
+async function getAllCategories() {
+    await connectToDatabase();
+    const categories = await Category.find({}).sort({ sortOrder: 1, name: 1 });
+    return JSON.parse(JSON.stringify(categories));
 }
 
 export default async function AdminPage() {
@@ -34,7 +41,7 @@ export default async function AdminPage() {
     }
 
     const userEmail = user.emailAddresses[0].emailAddress;
-    if (!ADMIN_EMAILS.includes(userEmail)) {
+    if (!isAdminEmail(userEmail)) {
         return (
             <div className="flex h-[50vh] items-center justify-center">
                 <div className="text-center">
@@ -48,11 +55,13 @@ export default async function AdminPage() {
         );
     }
 
-    const listings = await getAllListings();
+    const [listings, categories] = await Promise.all([getAllListings(), getAllCategories()]);
 
     return (
-        <div className="max-w-6xl mx-auto py-8">
+        <div className="max-w-6xl mx-auto py-8 space-y-10">
             <h1 className="text-3xl font-bold mb-8">Admin Dashboard</h1>
+
+            <CategoryManager initialCategories={categories} />
 
             <div className="border rounded-lg">
                 <Table>

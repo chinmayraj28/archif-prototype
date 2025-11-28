@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,6 +30,8 @@ import { listingFormSchema, ListingFormValues } from "@/lib/validation/listing";
 export default function SellPage() {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [categories, setCategories] = useState<{ _id: string; name: string; slug: string }[]>([]);
+    const [loadingCategories, setLoadingCategories] = useState(true);
 
     const form = useForm<ListingFormValues>({
         resolver: zodResolver(listingFormSchema),
@@ -44,6 +46,35 @@ export default function SellPage() {
     });
 
     const images = form.watch("images");
+
+    useEffect(() => {
+        let active = true;
+        async function fetchCategories() {
+            try {
+                const res = await fetch("/api/categories?visibleOnly=true");
+                if (res.ok) {
+                    const data = await res.json();
+                    if (active) {
+                        setCategories(data);
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to load categories", error);
+            } finally {
+                if (active) setLoadingCategories(false);
+            }
+        }
+        fetchCategories();
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (categories.length > 0 && !form.getValues("category")) {
+            form.setValue("category", categories[0].slug);
+        }
+    }, [categories, form]);
 
     async function onSubmit(values: ListingFormValues) {
         setIsSubmitting(true);
@@ -181,11 +212,21 @@ export default function SellPage() {
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            <SelectItem value="men">Men</SelectItem>
-                                            <SelectItem value="women">Women</SelectItem>
-                                            <SelectItem value="kids">Kids</SelectItem>
-                                            <SelectItem value="home">Home</SelectItem>
-                                            <SelectItem value="entertainment">Entertainment</SelectItem>
+                                            {loadingCategories ? (
+                                                <SelectItem value="loading" disabled>
+                                                    Loading...
+                                                </SelectItem>
+                                            ) : categories.length === 0 ? (
+                                                <SelectItem value="none" disabled>
+                                                    No categories available
+                                                </SelectItem>
+                                            ) : (
+                                                categories.map((category) => (
+                                                    <SelectItem key={category._id} value={category.slug}>
+                                                        {category.name}
+                                                    </SelectItem>
+                                                ))
+                                            )}
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />

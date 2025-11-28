@@ -4,6 +4,30 @@ import { stripe } from "@/lib/stripe";
 import connectToDatabase from "@/lib/db";
 import Offer from "@/models/Offer";
 import Listing from "@/models/Listing";
+import Wishlist from "@/models/Wishlist";
+import Notification from "@/models/Notification";
+
+async function notifyWishlistUsers(listingId: string) {
+    const listing = await Listing.findById(listingId).populate("sellerId", "_id");
+    if (!listing) return;
+
+    const wishlistEntries = await Wishlist.find({ listingId }).populate("userId", "_id");
+    if (wishlistEntries.length === 0) return;
+
+    const notifications = wishlistEntries.map((entry) => ({
+        recipientId: entry.userId._id,
+        actorId: listing.sellerId?._id || entry.userId._id,
+        type: "listing_sold",
+        data: {
+            listingId,
+            title: listing.title,
+        },
+        read: false,
+    }));
+
+    await Notification.insertMany(notifications);
+    await Wishlist.deleteMany({ listingId });
+}
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
@@ -53,6 +77,7 @@ export async function POST(req: NextRequest) {
                 // Mark listing as sold
                 const listing = offer.listingId as any;
                 await Listing.findByIdAndUpdate(listing._id, { status: "sold" });
+                await notifyWishlistUsers(listing._id.toString());
 
                 console.log(`Payment successful for offer ${offerId}`);
                 break;
@@ -79,6 +104,7 @@ export async function POST(req: NextRequest) {
 
                 const listing = offer.listingId as any;
                 await Listing.findByIdAndUpdate(listing._id, { status: "sold" });
+                await notifyWishlistUsers(listing._id.toString());
 
                 console.log(`Async payment succeeded for offer ${offerId}`);
                 break;

@@ -1,7 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
 import connectToDatabase from "@/lib/db";
 import Listing from "@/models/Listing";
+import Category from "@/models/Category";
+import Wishlist from "@/models/Wishlist";
+import User from "@/models/User";
+import SearchFilters from "@/components/SearchFilters";
+import WishlistButton from "@/components/WishlistButton";
 
 async function getListings(searchParams: { query?: string; category?: string }) {
   await connectToDatabase();
@@ -18,30 +24,31 @@ async function getListings(searchParams: { query?: string; category?: string }) 
   return JSON.parse(JSON.stringify(listings));
 }
 
+async function getCategories() {
+  await connectToDatabase();
+  const categories = await Category.find({ isVisible: true }).sort({
+    sortOrder: 1,
+    name: 1,
+  });
+  return JSON.parse(JSON.stringify(categories));
+}
+
+async function getWishlistedListingIds(clerkId?: string | null) {
+  if (!clerkId) return [];
+  await connectToDatabase();
+  const user = await User.findOne({ clerkId });
+  if (!user) return [];
+  const entries = await Wishlist.find({ userId: user._id }).select("listingId");
+  return entries.map((entry: any) => entry.listingId.toString());
+}
+
 const heroImage =
   "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1600&q=80";
 
-const featuredTiles = [
-  {
-    label: "Bags",
-    image:
-      "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    label: "Shoes",
-    image:
-      "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    label: "Clothing",
-    image:
-      "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1200&q=80",
-  },
-];
-
-const categoryTabs = [
-  { label: "Women", value: "women" },
-  { label: "Men", value: "men" },
+const fallbackTileImages = [
+  "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1200&q=80",
+  "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1200&q=80",
 ];
 
 export default async function Home({
@@ -50,8 +57,27 @@ export default async function Home({
   searchParams: Promise<{ query?: string; category?: string }>;
 }) {
   const params = await searchParams;
-  const listings = await getListings(params);
-  const activeCategory = (params.category || "women").toLowerCase();
+  const { userId } = await auth();
+  const [listings, categoriesRaw, wishlistIds] = await Promise.all([
+    getListings(params),
+    getCategories(),
+    getWishlistedListingIds(userId),
+  ]);
+
+  const categories = categoriesRaw.length
+    ? categoriesRaw
+    : [
+        { _id: "women", name: "Women", slug: "women", sortOrder: 0 },
+        { _id: "men", name: "Men", slug: "men", sortOrder: 1 },
+      ];
+
+  const activeCategory = (params.category || "all").toLowerCase();
+  const initialQuery = params.query || "";
+  const featuredTiles = categories.slice(0, 3).map((category, index) => ({
+    label: category.name,
+    slug: category.slug,
+    image: fallbackTileImages[index % fallbackTileImages.length],
+  }));
 
   return (
     <div className="space-y-16 text-[#111]">
@@ -88,17 +114,28 @@ export default async function Home({
         </div>
       </section>
 
-      <section className="space-y-10">
-        <div className="flex justify-center gap-10 text-sm font-medium uppercase tracking-[0.2em]">
-          {categoryTabs.map((tab) => {
-            const isActive = activeCategory === tab.value;
+      <section id="search-tools" className="space-y-10">
+        <SearchFilters
+          categories={categories}
+          initialQuery={initialQuery}
+          activeCategory={activeCategory}
+        />
+
+        <div className="flex flex-wrap justify-center gap-4 text-sm font-medium uppercase tracking-[0.2em]">
+          {[{ _id: "all-tab", name: "All", slug: "all" }, ...categories.slice(0, 5)].map((tab) => {
+            const isActive = activeCategory === tab.slug;
+            const params = new URLSearchParams();
+            if (tab.slug !== "all") {
+              params.set("category", tab.slug);
+            }
+            const href = params.toString() ? `/?${params.toString()}` : "/";
             return (
               <Link
-                key={tab.value}
-                href={`/?category=${tab.value}`}
+                key={tab._id}
+                href={href}
                 className="relative pb-2 text-[#111]/70 transition hover:text-[#111]"
               >
-                <span>{tab.label}</span>
+                <span>{tab.name}</span>
                 <span
                   className={`absolute inset-x-1 -bottom-0.5 h-[1px] bg-[#111] transition-transform duration-300 ${
                     isActive ? "scale-x-100" : "scale-x-0"
@@ -113,7 +150,7 @@ export default async function Home({
           {featuredTiles.map((tile) => (
             <Link
               key={tile.label}
-              href={`/?category=${activeCategory}`}
+              href={`/?category=${tile.slug}`}
               className="group relative block overflow-hidden rounded-[14px] border border-[#ededed] bg-white shadow-[0_20px_60px_rgba(0,0,0,0.06)] transition duration-500 hover:-translate-y-1 hover:shadow-[0_28px_80px_rgba(0,0,0,0.08)]"
             >
               <div className="relative h-[340px]">
@@ -164,6 +201,17 @@ export default async function Home({
                 className="group block overflow-hidden rounded-[14px] border border-[#ededed] bg-white shadow-[0_18px_50px_rgba(0,0,0,0.06)] transition duration-500 hover:-translate-y-1 hover:shadow-[0_28px_80px_rgba(0,0,0,0.09)]"
               >
                 <div className="relative aspect-[3/4] overflow-hidden bg-[#f7f7f7]">
+                  <WishlistButton
+                    listingId={item._id}
+                    initiallyWishlisted={wishlistIds.includes(item._id)}
+                    disabled={item.status === "sold"}
+                    className="absolute right-4 top-4 z-10"
+                  />
+                  {item.status === "sold" && (
+                    <div className="absolute inset-0 z-0 flex items-center justify-center bg-black/50 text-sm font-semibold uppercase tracking-[0.3em] text-white">
+                      Sold Out
+                    </div>
+                  )}
                   <Image
                     src={item.images[0]}
                     alt={item.title}

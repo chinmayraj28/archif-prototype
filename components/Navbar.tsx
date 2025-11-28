@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useUser } from "@clerk/nextjs";
-import { ChevronDown, Globe2, Search, ShoppingBag, UserRound, MessageCircle } from "lucide-react";
+import { useUser, UserButton, SignInButton } from "@clerk/nextjs";
+import { ChevronDown, Globe2, Search, MessageCircle, Heart, UserRound } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
+import { isAdminEmail } from "@/lib/admin";
 
 const navLinks = [
   { label: "New Drop", href: "/" },
@@ -14,7 +15,10 @@ const navLinks = [
 ];
 
 export default function Navbar() {
-  const { isSignedIn } = useUser();
+  const { isSignedIn, user } = useUser();
+  const userEmail =
+    user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress;
+  const isAdmin = isAdminEmail(userEmail);
 
   return (
     <nav className="fixed inset-x-0 top-0 z-50 border-b border-[#ededed] bg-white/90 backdrop-blur">
@@ -47,9 +51,11 @@ export default function Navbar() {
             USD
             <ChevronDown className="h-4 w-4" />
           </button>
-          <IconButton ariaLabel="Search">
-            <Search className="h-4 w-4" />
-          </IconButton>
+          <Link href="/#search-tools" aria-label="Skip to search">
+            <IconButton ariaLabel="Search">
+              <Search className="h-4 w-4" />
+            </IconButton>
+          </Link>
           {isSignedIn && (
             <>
               <Link href="/messages" aria-label="Messages">
@@ -58,16 +64,36 @@ export default function Navbar() {
                 </IconButton>
               </Link>
               <NotificationBell />
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="hidden rounded-full border border-[#ededed] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#111] transition hover:-translate-y-0.5 hover:bg-[#111] hover:text-white md:block"
+                >
+                  Admin
+                </Link>
+              )}
+              <Link
+                href="/account"
+                className="hidden rounded-full border border-[#ededed] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#111] transition hover:-translate-y-0.5 hover:bg-[#111] hover:text-white sm:block"
+              >
+                Account
+              </Link>
             </>
           )}
-          <Link href={isSignedIn ? "/account" : "/sign-in"} aria-label="Profile">
+          {isSignedIn ? (
+            <UserButton afterSignOutUrl="/" />
+          ) : (
+            <SignInButton mode="modal">
+              <IconButton ariaLabel="Sign in">
+                <UserRound className="h-4 w-4" />
+              </IconButton>
+            </SignInButton>
+          )}
+          <Link href={isSignedIn ? "/wishlist" : "/sign-in"} aria-label="Wishlist">
             <IconButton>
-              <UserRound className="h-4 w-4" />
+              <Heart className="h-4 w-4" />
             </IconButton>
           </Link>
-          <IconButton ariaLabel="Cart">
-            <ShoppingBag className="h-4 w-4" />
-          </IconButton>
         </div>
       </div>
     </nav>

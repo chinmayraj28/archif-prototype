@@ -20,6 +20,8 @@ import Offer from "@/models/Offer";
 import DeleteButton from "./_components/DeleteButton";
 import OfferActions from "./_components/OfferActions";
 import SellerOffersTable from "./_components/SellerOffersTable";
+import Wishlist from "@/models/Wishlist";
+import WishlistButton from "@/components/WishlistButton";
 
 // Direct DB access is better for server components to avoid API overhead/URL issues during build
 async function getListingDirect(id: string) {
@@ -56,6 +58,7 @@ export default async function ListingPage({
     let sellerOffersDocs: any[] = [];
     let buyerOfferDoc: any = null;
 
+    let isWishlisted = false;
     if (currentUser) {
         if (isOwner) {
             sellerOffersDocs = await Offer.find({ listingId: listing._id })
@@ -69,6 +72,12 @@ export default async function ListingPage({
             })
                 .select("amount status paymentStatus lastActionBy updatedAt")
                 .sort({ updatedAt: -1 });
+
+            const wishlistEntry = await Wishlist.findOne({
+                userId: currentUser._id,
+                listingId: listing._id,
+            });
+            isWishlisted = Boolean(wishlistEntry);
         }
     }
 
@@ -114,6 +123,16 @@ export default async function ListingPage({
                         <p className="text-2xl font-bold text-primary mt-2">
                             ${listing.price.toFixed(2)}
                         </p>
+                        {!isOwner && (
+                            <div className="mt-3">
+                                <WishlistButton
+                                    listingId={listing._id}
+                                    initiallyWishlisted={isWishlisted}
+                                    disabled={listing.status === "sold"}
+                                    layout="inline"
+                                />
+                            </div>
+                        )}
                         {listing.status === "sold" && (
                             <p className="text-muted-foreground mt-2 font-medium">
                                 This item has been sold.

@@ -32,6 +32,8 @@ function describeNotification(notification: any) {
             return `${notification.actorId.username} sent you an offer`;
         case "offer_response":
             return `${notification.actorId.username} responded to an offer`;
+        case "listing_sold":
+            return `${notification.data?.title || "An item"} was sold out`;
         default:
             return "You have a new notification";
     }

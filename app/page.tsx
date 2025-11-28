@@ -64,7 +64,9 @@ export default async function Home({
     getWishlistedListingIds(userId),
   ]);
 
-  const categories = categoriesRaw.length
+  type CategoryType = { _id: string; name: string; slug: string; sortOrder: number };
+
+  const categories: CategoryType[] = categoriesRaw.length
     ? categoriesRaw
     : [
         { _id: "women", name: "Women", slug: "women", sortOrder: 0 },
@@ -73,7 +75,7 @@ export default async function Home({
 
   const activeCategory = (params.category || "all").toLowerCase();
   const initialQuery = params.query || "";
-  const featuredTiles = categories.slice(0, 3).map((category, index) => ({
+  const featuredTiles = categories.slice(0, 3).map((category: CategoryType, index: number) => ({
     label: category.name,
     slug: category.slug,
     image: fallbackTileImages[index % fallbackTileImages.length],
